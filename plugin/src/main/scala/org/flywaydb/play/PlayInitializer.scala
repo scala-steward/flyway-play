@@ -30,6 +30,7 @@ import scala.collection.JavaConverters._
 class PlayInitializer @Inject() (
     configuration: Configuration,
     environment: Environment,
+    flyways: Flyways,
     webCommands: WebCommands) {
 
   private val flywayConfigurations = {
@@ -40,56 +41,6 @@ class PlayInitializer @Inject() (
   private val allDatabaseNames = flywayConfigurations.keys
 
   private val flywayPrefixToMigrationScript = "db/migration"
-
-  private def migrationFileDirectoryExists(path: String): Boolean = {
-    environment.resource(path) match {
-      case Some(r) => {
-        Logger.debug(s"Directory for migration files found. ${path}")
-        true
-      }
-      case None => {
-        Logger.warn(s"Directory for migration files not found. ${path}")
-        false
-      }
-    }
-  }
-
-  private lazy val flyways: Map[String, Flyway] = {
-    for {
-      (dbName, configuration) <- flywayConfigurations
-      migrationFilesLocation = s"db/migration/${dbName}"
-      if migrationFileDirectoryExists(migrationFilesLocation)
-    } yield {
-      val flyway = new Flyway
-      val database = configuration.database
-      flyway.setDataSource(new DriverDataSource(getClass.getClassLoader, database.driver, database.url, database.user, database.password))
-      if (!configuration.locations.isEmpty) {
-        val locations = configuration.locations.map(location => s"${migrationFilesLocation}/${location}")
-        flyway.setLocations(locations: _*)
-      } else {
-        flyway.setLocations(migrationFilesLocation)
-      }
-      flyway.setValidateOnMigrate(configuration.validateOnMigrate)
-      flyway.setEncoding(configuration.encoding)
-      flyway.setOutOfOrder(configuration.outOfOrder)
-      if (configuration.initOnMigrate) {
-        flyway.setBaselineOnMigrate(true)
-      }
-      for (prefix <- configuration.placeholderPrefix) {
-        flyway.setPlaceholderPrefix(prefix)
-      }
-      for (suffix <- configuration.placeholderSuffix) {
-        flyway.setPlaceholderSuffix(suffix)
-      }
-      flyway.setSchemas(configuration.schemas: _*)
-      flyway.setPlaceholders(configuration.placeholders.asJava)
-      configuration.sqlMigrationPrefix.foreach { sqlMigrationPrefix =>
-        flyway.setSqlMigrationPrefix(sqlMigrationPrefix)
-      }
-
-      dbName -> flyway
-    }
-  }
 
   private def migrationDescriptionToShow(dbName: String, migration: MigrationInfo): String = {
     environment.resourceAsStream(s"${flywayPrefixToMigrationScript}/${dbName}/${migration.getScript}").map { in =>

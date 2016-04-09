@@ -26,7 +26,7 @@ class FlywayWebCommand(
   configuration: Configuration,
   environment: Environment,
   flywayPrefixToMigrationScript: String,
-  flyways: Map[String, Flyway])
+  flyways: Flyways)
     extends HandleWebCommandSupport {
 
   def handleWebCommand(request: RequestHeader, sbtLink: BuildLink, path: java.io.File): Option[Result] = {
