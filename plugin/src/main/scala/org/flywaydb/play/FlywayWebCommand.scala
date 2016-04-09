@@ -15,6 +15,9 @@
  */
 package org.flywaydb.play
 
+import javax.inject.Inject
+
+import com.google.inject.Singleton
 import org.flywaydb.core.api.MigrationInfo
 import play.core._
 import play.api._
@@ -22,10 +25,15 @@ import play.api.mvc._
 import play.api.mvc.Results._
 import org.flywaydb.core.Flyway
 
-class FlywayWebCommand(
+@Singleton
+class FlywayWebCommand @Inject() (webCommands: WebCommands, flywayWebCommandHandler: FlywayWebCommandHandler) {
+  webCommands.addHandler(flywayWebCommandHandler)
+}
+
+@Singleton
+class FlywayWebCommandHandler @Inject() (
   configuration: Configuration,
   environment: Environment,
-  flywayPrefixToMigrationScript: String,
   flyways: Flyways)
     extends HandleWebCommandSupport {
 
@@ -53,7 +61,7 @@ class FlywayWebCommand(
       case WebCommandPath.showInfoPath(dbName) =>
         val allMigrationInfo: Seq[MigrationInfo] = flyways.get(dbName).toSeq.flatMap(_.info().all())
         val scripts: Seq[String] = allMigrationInfo.map { info =>
-          environment.resourceAsStream(s"${flywayPrefixToMigrationScript}/${dbName}/${info.getScript}").map { in =>
+          environment.resourceAsStream(s"db/migration/${dbName}/${info.getScript}").map { in =>
             FileUtils.readInputStreamToString(in)
           }.orElse {
             for {

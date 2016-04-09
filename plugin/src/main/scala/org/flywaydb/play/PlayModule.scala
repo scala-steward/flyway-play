@@ -21,6 +21,7 @@ import play.api.inject._
 class PlayModule extends Module {
   def bindings(environment: Environment, configuration: Configuration) = {
     Seq(
+      bind[FlywayWebCommand].toSelf.eagerly(),
       bind[PlayInitializer].toSelf.eagerly
     )
   }

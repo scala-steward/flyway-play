@@ -18,20 +18,14 @@ package org.flywaydb.play
 import java.io.FileNotFoundException
 import javax.inject._
 
-import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.MigrationInfo
-import org.flywaydb.core.internal.util.jdbc.DriverDataSource
 import play.api._
-import play.core._
-
-import scala.collection.JavaConverters._
 
 @Singleton
 class PlayInitializer @Inject() (
     configuration: Configuration,
     environment: Environment,
-    flyways: Flyways,
-    webCommands: WebCommands) {
+    flyways: Flyways) {
 
   private val flywayConfigurations = {
     val configReader = new ConfigReader(configuration, environment)
@@ -40,10 +34,8 @@ class PlayInitializer @Inject() (
 
   private val allDatabaseNames = flywayConfigurations.keys
 
-  private val flywayPrefixToMigrationScript = "db/migration"
-
   private def migrationDescriptionToShow(dbName: String, migration: MigrationInfo): String = {
-    environment.resourceAsStream(s"${flywayPrefixToMigrationScript}/${dbName}/${migration.getScript}").map { in =>
+    environment.resourceAsStream(s"db/migration/${dbName}/${migration.getScript}").map { in =>
       s"""|--- ${migration.getScript} ---
           |${FileUtils.readInputStreamToString(in)}""".stripMargin
     }.orElse {
@@ -70,9 +62,6 @@ class PlayInitializer @Inject() (
   }
 
   def onStart(): Unit = {
-    val flywayWebCommand = new FlywayWebCommand(configuration, environment, flywayPrefixToMigrationScript, flyways)
-    webCommands.addHandler(flywayWebCommand)
-
     for (dbName <- allDatabaseNames) {
       if (environment.mode == Mode.Test || flywayConfigurations(dbName).auto) {
         migrateAutomatically(dbName)

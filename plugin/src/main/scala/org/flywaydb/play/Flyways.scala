@@ -17,11 +17,11 @@ class Flyways @Inject() (configuration: Configuration, environment: Environment)
     configReader.getFlywayConfigurations
   }
 
-  def get(name: String): Option[Flyway] = instances.get(name)
+  def get(name: String): Option[Flyway] = all.get(name)
 
-  def keys: Iterable[String] = instances.keys
+  def keys: Iterable[String] = all.keys
 
-  private val instances: Map[String, Flyway] = {
+  val all: Map[String, Flyway] = {
     for {
       (dbName, configuration) <- flywayConfigurations
       migrationFilesLocation = s"db/migration/${dbName}"
